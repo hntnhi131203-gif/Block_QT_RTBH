@@ -144,11 +144,11 @@ def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt):
     route_next_hop_vnpt = "discard" if next_hop_vnpt == "1" else f"next-hop {next_hop_vnpt}"
     cmd_type = "set" if action == "ban" else "delete"
     
-    res1 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip} next-hop {next_hop_fpt}",
+    res1 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip}/32 next-hop {next_hop_fpt}",
             f"{cmd_type} policy-options policy-statement {QT} term 1 from route-filter {ip}/32 exact"]
-    res2 = [f"{cmd_type} routing-instances {DC} routing-options static route {ip} next-hop {next_hop_cmc}",
+    res2 = [f"{cmd_type} routing-instances {DC} routing-options static route {ip}/32 next-hop {next_hop_cmc}",
             f"{cmd_type} policy-options policy-statement {QT} term 1 from route-filter {ip}/32 exact"]
-    res3 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip} {route_next_hop_vnpt}",
+    res3 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip}/32 {route_next_hop_vnpt}",
             f"{cmd_type} policy-options policy-statement black-hole-VNPT term 1 from route-filter {ip}/32 exact"]
     return res1, res2, res3
 

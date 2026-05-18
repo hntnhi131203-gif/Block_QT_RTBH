@@ -41,11 +41,12 @@ DEVICES = {
 }
 
 IP_RANGES = {
-    ('45.119.80.0/22', '45.119.84.0/22'): ('10.10.20.2','172.31.255.19','172.31.249.1'),
-    ('103.27.236.0/22','103.87.220.0/22'): ('10.10.10.2','172.31.255.19',''),
-    ('103.48.84.0/22', '103.48.192.0/22'): ('10.10.30.2','172.31.255.3',''),
-    ('45.119.212.0/22', '42.96.16.0/22'): ('10.10.40.2','172.31.255.3',''),
+    ('45.119.80.0/22', '45.119.84.0/22'): ('10.10.20.2','172.31.255.19','10.10.20.2'),
+    ('103.27.236.0/22','103.87.220.0/22'): ('10.10.10.2','172.31.255.19','10.10.20.2'),
+    ('103.48.84.0/22', '103.48.192.0/22'): ('10.10.30.2','172.31.255.3','1'),
+    ('45.119.212.0/22', '42.96.16.0/22'): ('10.10.40.2','172.31.255.3','1'),
     ('42.96.20.0/23',): ('10.10.31.2','172.17.11.3',''),
+    ('42.96.22.0/23',): ('172.31.255.2','172.18.11.3','1'),
     ('103.2.228.0/22',): ('172.31.255.19','172.31.255.19',''),
     ('103.2.224.0/22',): ('10.10.33.2','10.10.33.2','')
 }
@@ -136,18 +137,19 @@ def check_ip_in_ranges(ip, ranges):
             return True
     return False
 
-def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vt):
+def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt):
     DC = "BGP-CMC-01" if next_hop_cmc == "172.31.255.3" else "BGP-CMC-02"
     DC_FPT = "BGP-FPT3" if next_hop_fpt == "10.10.33.2" else "BGP-FPT"
     QT = "black-hole-QT2" if next_hop_fpt == "10.10.33.2" else "black-hole-QT"
+    route_next_hop_vnpt = "discard" if next_hop_vnpt == "1" else f"next-hop {next_hop_vnpt}"
     cmd_type = "set" if action == "ban" else "delete"
     
     res1 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip} next-hop {next_hop_fpt}",
             f"{cmd_type} policy-options policy-statement {QT} term 1 from route-filter {ip}/32 exact"]
     res2 = [f"{cmd_type} routing-instances {DC} routing-options static route {ip} next-hop {next_hop_cmc}",
             f"{cmd_type} policy-options policy-statement {QT} term 1 from route-filter {ip}/32 exact"]
-    res3 = [f"{cmd_type} routing-instances BGP-VIETTEL routing-options static route {ip} next-hop {next_hop_vt}",
-            f"{cmd_type} policy-options policy-statement black-hole-ALL term 1 from route-filter {ip}/32 exact"]
+    res3 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip} {route_next_hop_vnpt}",
+            f"{cmd_type} policy-options policy-statement black-hole-VNPT term 1 from route-filter {ip}/32 exact"]
     return res1, res2, res3
 
 def commit_device(device_name):
@@ -226,7 +228,7 @@ def process_queue_batch():
             # 3. Phân loại lệnh vào Dictionary
             for item in batch:
                 client_ip, action = item['ip'], item['action']
-                for ranges, (next_hop_fpt, next_hop_cmc, next_hop_vt) in IP_RANGES.items():
+                for ranges, (next_hop_fpt, next_hop_cmc, next_hop_vnpt) in IP_RANGES.items():
                     if check_ip_in_ranges(client_ip, ranges):
                         sw1, sw2 = None, None
                         match next_hop_fpt:
@@ -235,11 +237,11 @@ def process_queue_batch():
                             case '10.10.31.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
                             case '10.10.33.2': sw1, sw2 = 'QFXDC7', 'QFXDC7'
                         
-                        cfg1, cfg2, cfg3 = get_config_commands(client_ip, action, next_hop_fpt, next_hop_cmc, next_hop_vt)
+                        cfg1, cfg2, cfg3 = get_config_commands(client_ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt)
                         commands_to_send[sw1].extend(cfg1)
                         if next_hop_fpt != "10.10.33.2" and sw2:
                             commands_to_send[sw2].extend(cfg2)
-                            if next_hop_vt != '':   
+                            if next_hop_vnpt != '':   
                             # Apply VT config to QFXJ23
                                 commands_to_send['QFXJ23'].extend(cfg3)
                         break

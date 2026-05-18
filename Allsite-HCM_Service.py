@@ -36,8 +36,7 @@ logger.addHandler(console_handler)
 DEVICES = {
     'QFXG8': {"device_type": "juniper", "ip": "10.8.8.38", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50},
     'EXDC4': {"device_type": "juniper", "ip": "10.2.8.1", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50},
-    'QFXDC7': {"device_type": "juniper", "ip": "10.2.8.82", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50},
-    'QFXJ23': {"device_type": "juniper", "ip": "10.2.8.83", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50}
+    'QFXDC7': {"device_type": "juniper", "ip": "10.2.8.82", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50}
 }
 
 IP_RANGES = {
@@ -236,14 +235,15 @@ def process_queue_batch():
                             case '10.10.30.2'|'10.10.40.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
                             case '10.10.31.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
                             case '10.10.33.2': sw1, sw2 = 'QFXDC7', 'QFXDC7'
+                            case '172.31.255.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
                         
                         cfg1, cfg2, cfg3 = get_config_commands(client_ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt)
                         commands_to_send[sw1].extend(cfg1)
                         if next_hop_fpt != "10.10.33.2" and sw2:
                             commands_to_send[sw2].extend(cfg2)
                         if next_hop_vnpt != '':   
-                        # Apply VNPT config to QFXJ23
-                            commands_to_send['QFXJ23'].extend(cfg3)
+                        # Apply VNPT config to EXDC4 if next_hop_vnpt exists, regardless of sw1/sw2, vì config này chỉ liên quan đến policy và có thể áp dụng chung
+                            commands_to_send['EXDC4'].extend(cfg3)
                         break
             
             # 4. Thực thi Đa luồng (Multithreading)

@@ -241,9 +241,9 @@ def process_queue_batch():
                         commands_to_send[sw1].extend(cfg1)
                         if next_hop_fpt != "10.10.33.2" and sw2:
                             commands_to_send[sw2].extend(cfg2)
-                            if next_hop_vnpt != '':   
-                            # Apply VT config to QFXJ23
-                                commands_to_send['QFXJ23'].extend(cfg3)
+                        if next_hop_vnpt != '':   
+                        # Apply VNPT config to QFXJ23
+                            commands_to_send['QFXJ23'].extend(cfg3)
                         break
             
             # 4. Thực thi Đa luồng (Multithreading)

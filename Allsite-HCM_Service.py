@@ -140,7 +140,7 @@ def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt):
     DC = "BGP-CMC-01" if next_hop_cmc in ("172.31.255.3","172.18.11.3") else "BGP-CMC-02"
     DC_FPT = "BGP-FPT3" if next_hop_fpt == "10.10.33.2" else "BGP-FPT"
     QT = "black-hole-QT2" if next_hop_fpt == "10.10.33.2" else "black-hole-QT"
-    route_next_hop_vnpt = "discard" if next_hop_vnpt == "1" else f"next-hop {next_hop_vnpt}"
+    route_next_hop_vnpt = "58.186.241.122" if next_hop_vnpt == "1" else f"next-hop {next_hop_vnpt}"
     cmd_type = "set" if action == "ban" else "delete"
     
     res1 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip}/32 next-hop {next_hop_fpt}",

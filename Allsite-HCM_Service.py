@@ -271,8 +271,8 @@ def process_queue_batch():
             print("--- Hoàn tất lô. Quay lại trạng thái chờ ---\n")
             
             # Nếu queue trống, thực hiện final commit trên tất cả thiết bị
-            if ip_queue.empty():
-                final_commit_all_devices()
+            #if ip_queue.empty():
+                #final_commit_all_devices()
                     
         except Exception as e:
             print(f"Lỗi Worker: {str(e)}")

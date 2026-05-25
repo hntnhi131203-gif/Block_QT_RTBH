@@ -187,7 +187,8 @@ def apply_config(device_name, commands):
         with ConnectHandler(**DEVICES[device_name]) as net_connect:
             net_connect.config_mode()
             net_connect.send_config_set(commands)
-            net_connect.send_config_set("commit check")
+            #net_connect.send_config_set("commit check")
+            net_connect.commit()
             net_connect.exit_config_mode()
         
         with status_lock:

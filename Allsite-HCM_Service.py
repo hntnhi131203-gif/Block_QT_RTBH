@@ -45,8 +45,8 @@ IP_RANGES = {
     ('103.48.84.0/22', '103.48.192.0/22'): ('10.10.30.2','172.31.255.3','1'),
     ('45.119.212.0/22', '42.96.16.0/22'): ('10.10.40.2','172.31.255.3','1'),
     ('42.96.20.0/23',): ('10.10.31.2','172.17.11.3',''),
-    ('42.96.22.0/23',): ('172.31.255.2','172.18.11.3','1'),
-    ('103.2.228.0/22',): ('172.31.255.19','172.31.255.19',''),
+    ('42.96.22.0/23',): ('172.31.255.2','172.18.11.3','58.186.241.122'),
+    ('103.2.228.0/22',): ('172.31.255.18','172.31.255.19','172.31.255.18'),
     ('103.2.224.0/22',): ('10.10.33.2','10.10.33.2','')
 }
 
@@ -236,12 +236,13 @@ def process_queue_batch():
                             case '10.10.31.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
                             case '10.10.33.2': sw1, sw2 = 'QFXDC7', 'QFXDC7'
                             case '172.31.255.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
+                            case '172.31.255.18': sw1, sw2 = 'EXDC4', 'QFXG8'
                         
                         cfg1, cfg2, cfg3 = get_config_commands(client_ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt)
                         commands_to_send[sw1].extend(cfg1)
                         if next_hop_fpt != "10.10.33.2" and sw2:
                             commands_to_send[sw2].extend(cfg2)
-                        if next_hop_vnpt != '':   
+                        if next_hop_vnpt != '':
                         # Apply VNPT config to EXDC4 if next_hop_vnpt exists, regardless of sw1/sw2, vì config này chỉ liên quan đến policy và có thể áp dụng chung
                             commands_to_send['EXDC4'].extend(cfg3)
                         break

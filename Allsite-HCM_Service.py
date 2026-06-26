@@ -258,7 +258,7 @@ def process_queue_batch():
                             commands_to_send[sw2].extend(cfg2)
                         if next_hop_vnpt != '':
                         # Apply VNPT config to EXDC4 if next_hop_vnpt exists, regardless of sw1/sw2, vì config này chỉ liên quan đến policy và có thể áp dụng chung
-                            commands_to_send['QFXDC7'].extend(cfg3)
+                            commands_to_send['EXDC4'].extend(cfg3)
                         if client_ip in FULL_BLOCK_IPS:
                         # Apply VT config to QFXDC7 if client_ip is in FULL_BLOCK_IPS, because this config is specific to full block policy
                             commands_to_send['QFXDC7'].extend(cfg4)

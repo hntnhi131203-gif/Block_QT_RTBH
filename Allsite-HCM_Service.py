@@ -54,7 +54,7 @@ IP_RANGES = {
 
 # Một số IP cần block full (dùng policy-statement black-hole-ALL và VNPT term 3)
 FULL_BLOCK_IPS = {
-    '45.119.215.1'
+    '45.119.215.1','45.119.215.48','45.119.215.47','45.119.215.11'
 }
 
 app = Flask(__name__)

@@ -52,6 +52,11 @@ IP_RANGES = {
     ('103.95.159.0/24',): ('10.10.32.2','172.31.255.19','10.10.32.2')
 }
 
+# Một số IP cần block full (dùng policy-statement black-hole-ALL và VNPT term 3)
+FULL_BLOCK_IPS = {
+    '45.119.215.1'
+}
+
 app = Flask(__name__)
 ip_queue = Queue()
 DB_FILE = 'allsite-hcm.db'
@@ -141,8 +146,10 @@ def check_ip_in_ranges(ip, ranges):
 def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt):
     DC = "BGP-CMC-01" if next_hop_cmc in ("172.31.255.3","172.18.11.3") else "BGP-CMC-02"
     DC_FPT = "BGP-FPT3" if next_hop_fpt == "10.10.33.2" else "BGP-FPT"
-    QT = "black-hole-QT2" if next_hop_fpt == "10.10.33.2" else "black-hole-QT"
+    is_full_block = ip in FULL_BLOCK_IPS
+    QT = "black-hole-ALL" if is_full_block else ("black-hole-QT2" if next_hop_fpt == "10.10.33.2" else "black-hole-QT")
     route_next_hop_vnpt = "58.186.241.122" if next_hop_vnpt == "1" else f"next-hop {next_hop_vnpt}"
+    vnpt_term = 3 if is_full_block else 1
     cmd_type = "set" if action == "ban" else "delete"
     
     res1 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip}/32 next-hop {next_hop_fpt}",
@@ -150,8 +157,12 @@ def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt):
     res2 = [f"{cmd_type} routing-instances {DC} routing-options static route {ip}/32 next-hop {next_hop_cmc}",
             f"{cmd_type} policy-options policy-statement {QT} term 1 from route-filter {ip}/32 exact"]
     res3 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip}/32 {route_next_hop_vnpt}",
-            f"{cmd_type} policy-options policy-statement black-hole-VNPT term 1 from route-filter {ip}/32 exact"]
-    return res1, res2, res3
+            f"{cmd_type} policy-options policy-statement black-hole-VNPT term {vnpt_term} from route-filter {ip}/32 exact"]
+    if is_full_block:
+        res4 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip}/32 next-hop {next_hop_fpt}",
+            f"{cmd_type} policy-options policy-statement black-hole-ALL-VT term 1 from route-filter {ip}/32 exact"]
+    res4 = []
+    return res1, res2, res3, res4
 
 def commit_device(device_name):
     """Commit một thiết bị"""
@@ -241,13 +252,16 @@ def process_queue_batch():
                             case '172.31.255.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
                             case '172.31.255.18': sw1, sw2 = 'EXDC4', 'QFXG8'
                         
-                        cfg1, cfg2, cfg3 = get_config_commands(client_ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt)
+                        cfg1, cfg2, cfg3, cfg4 = get_config_commands(client_ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt)
                         commands_to_send[sw1].extend(cfg1)
                         if next_hop_fpt != "10.10.33.2" and sw2:
                             commands_to_send[sw2].extend(cfg2)
                         if next_hop_vnpt != '':
                         # Apply VNPT config to EXDC4 if next_hop_vnpt exists, regardless of sw1/sw2, vì config này chỉ liên quan đến policy và có thể áp dụng chung
-                            commands_to_send['EXDC4'].extend(cfg3)
+                            commands_to_send['QFXDC7'].extend(cfg3)
+                        if client_ip in FULL_BLOCK_IPS:
+                        # Apply VT config to QFXDC7 if client_ip is in FULL_BLOCK_IPS, because this config is specific to full block policy
+                            commands_to_send['QFXDC7'].extend(cfg4)
                         break
             
             # 4. Thực thi Đa luồng (Multithreading)

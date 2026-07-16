@@ -491,8 +491,8 @@
                     >
                 </div>
                 <div class="action-buttons">
-                    <button class="btn btn-ban" onclick="sendAction('ban')">🚫 Ban IP</button>
-                    <button class="btn btn-unban" onclick="sendAction('unban')">✅ Unban IP</button>
+                    <button class="btn btn-ban" onclick="sendAction(event, 'ban')">🚫 Ban IP</button>
+                    <button class="btn btn-unban" onclick="sendAction(event, 'unban')">✅ Unban IP</button>
                     <button class="btn btn-clear" onclick="clearForm()">🔄 Xóa</button>
                 </div>
             </div>
@@ -510,6 +510,9 @@
     
     <script>
         const API_URL = '/status';
+        const FASTNETMON_API_BASE = 'http://127.0.0.1:10007';
+        const FASTNETMON_USER = 'admin';
+        const FASTNETMON_PASS = 'Lvs3726PAssw0rd';
         const REFRESH_INTERVAL = 1000; // 1 second
         
         async function fetchStatus() {
@@ -617,7 +620,50 @@
             document.getElementById('errorBanner').classList.remove('show');
         }
         
-        async function sendAction(action) {
+        function fastnetmonAuthHeader() {
+            return 'Basic ' + btoa(`${FASTNETMON_USER}:${FASTNETMON_PASS}`);
+        }
+
+        async function findBlackholeUUID(ip) {
+            const response = await fetch(`${FASTNETMON_API_BASE}/blackhole`, {
+                headers: {
+                    Authorization: fastnetmonAuthHeader()
+                }
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error_text || `HTTP ${response.status}`);
+            }
+            const data = await response.json();
+            const host = (data.values || []).find(item => item.ip === `${ip}/32`);
+            if (!host) {
+                throw new Error(`Không tìm thấy UUID của IP ${ip}`);
+            }
+            return host.uuid;
+        }
+
+        async function banIp(ip) {
+            const response = await fetch(`${FASTNETMON_API_BASE}/blackhole/${encodeURIComponent(ip)}`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: fastnetmonAuthHeader()
+                }
+            });
+            return response;
+        }
+
+        async function unbanIp(ip) {
+            const uuid = await findBlackholeUUID(ip);
+            const response = await fetch(`${FASTNETMON_API_BASE}/blackhole/${encodeURIComponent(uuid)}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: fastnetmonAuthHeader()
+                }
+            });
+            return response;
+        }
+
+        async function sendAction(event, action) {
             const ip = document.getElementById('ipInput').value.trim();
             
             if (!ip) {
@@ -630,28 +676,19 @@
                 return;
             }
             
-            const btn = event.target;
+            const btn = event.currentTarget;
             btn.disabled = true;
             const originalText = btn.textContent;
             btn.textContent = '⏳ Đang gửi...';
             
             try {
-                const response = await fetch('/fastnetmon_hook', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        ip: ip,
-                        action: action
-                    })
-                });
-                
+                const response = action === 'ban' ? await banIp(ip) : await unbanIp(ip);
                 if (response.ok) {
                     showSuccess(`✓ ${action === 'ban' ? 'Đã ban' : 'Đã unban'} IP ${ip}`);
                     clearForm();
                 } else {
-                    showError(`Lỗi: ${response.status} ${response.statusText}`);
+                    const data = await response.json().catch(() => ({}));
+                    showError(`Lỗi: ${data.error_text || response.statusText || `HTTP ${response.status}`}`);
                 }
             } catch (error) {
                 showError(`Không thể gửi: ${error.message}`);

@@ -625,42 +625,78 @@
         }
 
         async function findBlackholeUUID(ip) {
-            const response = await fetch(`${FASTNETMON_API_BASE}/blackhole`, {
-                headers: {
-                    Authorization: fastnetmonAuthHeader()
+            // Try direct call with Authorization header first
+            try {
+                let response = await fetch(`${FASTNETMON_API_BASE}/blackhole`, {
+                    method: 'GET',
+                    headers: { Authorization: fastnetmonAuthHeader() }
+                });
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error_text || `HTTP ${response.status}`);
                 }
-            });
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                throw new Error(data.error_text || `HTTP ${response.status}`);
+                const data = await response.json();
+                const host = (data.values || []).find(item => item.ip === `${ip}/32`);
+                if (!host) throw new Error(`Không tìm thấy UUID của IP ${ip}`);
+                return host.uuid;
+            } catch (err) {
+                // Fallback: try embedding credentials in URL (may work when header triggers preflight/CORS)
+                try {
+                    const url = `${FASTNETMON_API_BASE.replace('://', `://${FASTNETMON_USER}:${FASTNETMON_PASS}@`)}/blackhole`;
+                    let response = await fetch(url, { method: 'GET' });
+                    if (!response.ok) {
+                        const data = await response.json().catch(() => ({}));
+                        throw new Error(data.error_text || `HTTP ${response.status}`);
+                    }
+                    const data = await response.json();
+                    const host = (data.values || []).find(item => item.ip === `${ip}/32`);
+                    if (!host) throw new Error(`Không tìm thấy UUID của IP ${ip}`);
+                    return host.uuid;
+                } catch (err2) {
+                    throw new Error(err.message + ' | ' + err2.message);
+                }
             }
-            const data = await response.json();
-            const host = (data.values || []).find(item => item.ip === `${ip}/32`);
-            if (!host) {
-                throw new Error(`Không tìm thấy UUID của IP ${ip}`);
-            }
-            return host.uuid;
         }
 
         async function banIp(ip) {
-            const response = await fetch(`${FASTNETMON_API_BASE}/blackhole/${encodeURIComponent(ip)}`, {
-                method: 'PUT',
-                headers: {
-                    Authorization: fastnetmonAuthHeader()
-                }
-            });
-            return response;
+            // Try with Authorization header
+            try {
+                let response = await fetch(`${FASTNETMON_API_BASE}/blackhole/${encodeURIComponent(ip)}`, {
+                    method: 'PUT',
+                    headers: { Authorization: fastnetmonAuthHeader() }
+                });
+                if (response.ok) return response;
+                // if not ok, try fallback
+            } catch (err) {
+                // continue to fallback
+            }
+
+            // Fallback: try URL with embedded credentials
+            const url = `${FASTNETMON_API_BASE.replace('://', `://${FASTNETMON_USER}:${FASTNETMON_PASS}@`)}/blackhole/${encodeURIComponent(ip)}`;
+            return fetch(url, { method: 'PUT' });
         }
 
         async function unbanIp(ip) {
-            const uuid = await findBlackholeUUID(ip);
-            const response = await fetch(`${FASTNETMON_API_BASE}/blackhole/${encodeURIComponent(uuid)}`, {
-                method: 'DELETE',
-                headers: {
-                    Authorization: fastnetmonAuthHeader()
-                }
-            });
-            return response;
+            // Try header-based flow first
+            try {
+                const uuid = await findBlackholeUUID(ip);
+                let response = await fetch(`${FASTNETMON_API_BASE}/blackhole/${encodeURIComponent(uuid)}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: fastnetmonAuthHeader() }
+                });
+                if (response.ok) return response;
+            } catch (err) {
+                // continue to fallback
+            }
+
+            // Fallback: try embedding credentials
+            try {
+                const uuid = await findBlackholeUUID(ip); // this will itself try fallback if needed
+                const url = `${FASTNETMON_API_BASE.replace('://', `://${FASTNETMON_USER}:${FASTNETMON_PASS}@`)}/blackhole/${encodeURIComponent(uuid)}`;
+                return fetch(url, { method: 'DELETE' });
+            } catch (err2) {
+                throw err2;
+            }
         }
 
         async function sendAction(event, action) {

@@ -253,7 +253,7 @@ def process_queue_batch():
                         sw1, sw2 = None, None
                         match next_hop_fpt:
                             case '10.10.20.2'|'10.10.10.2'|'10.10.32.2': sw1, sw2 = 'EXDC4', 'QFXG8'
-                            case '10.10.30.2'|'10.10.40.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
+                            case '10.10.30.2'|'10.10.40.2'|'172.31.252.17': sw1, sw2 = 'QFXDC7', 'QFXG8'
                             case '10.10.31.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
                             case '10.10.33.2': sw1, sw2 = 'QFXDC7', 'QFXDC7'
                             case '172.31.255.2': sw1, sw2 = 'QFXDC7', 'QFXG8'

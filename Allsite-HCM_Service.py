@@ -55,7 +55,6 @@ IP_RANGES = {
 
 # Một số IP hoặc dải mạng cần block full (dùng policy-statement black-hole-ALL và VNPT term 3)
 FULL_BLOCK_IPS = {
-    '45.119.215.0/26',
     '45.119.215.48/32',
     '45.119.215.47/32',
     '45.119.215.11/32'
@@ -149,7 +148,7 @@ def check_ip_in_ranges(ip, ranges):
 
 def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt):
     DC = "BGP-CMC-01" if next_hop_cmc in ("172.31.255.3","172.18.11.3") else "BGP-CMC-02"
-    DC_FPT = "BGP-FPT3" if next_hop_fpt == "10.10.33.2" else "BGP-FPT"
+    DC_FPT = "FPT1-131423" if next_hop_fpt in ("10.10.40.2","10.10.41.2","10.10.30.2") else ("BGP-FPT3" if next_hop_fpt == "10.10.33.2" else "BGP-FPT")
     is_full_block = any(
         ipaddress.ip_address(ip) in ipaddress.ip_network(entry, strict=False)
         for entry in FULL_BLOCK_IPS

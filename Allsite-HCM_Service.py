@@ -159,6 +159,7 @@ def check_ip_in_ranges(ip, ranges):
 
 def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt):
     DC = "BGP-CMC-01" if next_hop_cmc in ("172.31.255.3","172.18.11.3") else "BGP-CMC-02"
+    DC_VNPT = "BGP-FPT"
     fpt_routing_instance = get_fpt_routing_instance(next_hop_fpt)
     is_full_block = any(
         ipaddress.ip_address(ip) in ipaddress.ip_network(entry, strict=False)
@@ -173,7 +174,7 @@ def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt):
             f"{cmd_type} policy-options policy-statement {QT} term 1 from route-filter {ip}/32 exact"]
     res2 = [f"{cmd_type} routing-instances {DC} routing-options static route {ip}/32 next-hop {next_hop_cmc}",
             f"{cmd_type} policy-options policy-statement {QT} term 1 from route-filter {ip}/32 exact"]
-    res3 = [f"{cmd_type} routing-instances {fpt_routing_instance} routing-options static route {ip}/32 {route_next_hop_vnpt}",
+    res3 = [f"{cmd_type} routing-instances {DC_VNPT} routing-options static route {ip}/32 {route_next_hop_vnpt}",
             f"{cmd_type} policy-options policy-statement black-hole-VNPT term {vnpt_term} from route-filter {ip}/32 exact"]
     res4 = []
     if is_full_block:

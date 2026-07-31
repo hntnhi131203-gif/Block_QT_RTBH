@@ -36,7 +36,7 @@ logger.addHandler(console_handler)
 DEVICES = {
     'QFXG8': {"device_type": "juniper", "ip": "10.8.8.38", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50},
     'EXDC4': {"device_type": "juniper", "ip": "10.2.8.1", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50},
-    'QFXDC7': {"device_type": "juniper", "ip": "10.2.8.82", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50}
+    'MX240_01': {"device_type": "juniper", "ip": "10.4.8.13", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50}
 }
 
 IP_RANGES = {
@@ -45,7 +45,7 @@ IP_RANGES = {
     ('103.87.220.0/22',): ('10.10.10.2','172.31.255.19',''),
     ('103.48.84.0/22', '103.48.192.0/22'): ('10.10.30.2','172.31.255.3','58.186.241.122'),
     ('45.119.212.0/23','45.119.214.0/24','45.119.215.64/26','45.119.215.128/25','42.96.16.0/22'): ('10.10.40.2','172.31.255.3','58.186.241.122'),
-    ('45.119.215.0/26',): ('172.31.252.17','172.31.255.3','58.186.241.122'),
+    ('45.119.215.0/26',): ('10.10.41.2','172.31.255.3','58.186.241.122'),
     ('42.96.20.0/23',): ('10.10.31.2','172.17.11.3',''),
     ('42.96.22.0/23',): ('172.31.255.2','172.18.11.3','58.186.241.122'),
     ('103.2.228.0/22',): ('172.31.255.18','10.10.90.2','172.31.255.18'),
@@ -68,7 +68,7 @@ db_lock = threading.Lock()
 
 # --- TRACKING TRẠNG THÁI ---
 status_lock = threading.Lock()
-switch_status = {'QFXG8': 'idle', 'EXDC4': 'idle', 'QFXDC7': 'idle', 'QFXJ23': 'idle'}
+switch_status = {'QFXG8': 'idle', 'EXDC4': 'idle', 'MX240_01': 'idle', 'QFXJ23': 'idle'}
 current_batch_ips = []
 batch_start_time = None
 
@@ -243,7 +243,7 @@ def process_queue_batch():
                 current_batch_ips = [item['ip'] for item in batch]
                     
             print(f"\n--- Bắt đầu xử lý lô gồm {len(batch)} IP ---")
-            commands_to_send = {'QFXG8': [], 'EXDC4': [], 'QFXDC7': [], 'QFXJ23': []}
+            commands_to_send = {'QFXG8': [], 'EXDC4': [], 'MX240_01': [], 'QFXJ23': []}
             
             # 3. Phân loại lệnh vào Dictionary
             for item in batch:
@@ -253,10 +253,10 @@ def process_queue_batch():
                         sw1, sw2 = None, None
                         match next_hop_fpt:
                             case '10.10.20.2'|'10.10.10.2'|'10.10.32.2': sw1, sw2 = 'EXDC4', 'QFXG8'
-                            case '10.10.30.2'|'10.10.40.2'|'172.31.252.17': sw1, sw2 = 'QFXDC7', 'QFXG8'
-                            case '10.10.31.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
-                            case '10.10.33.2': sw1, sw2 = 'QFXDC7', 'QFXDC7'
-                            case '172.31.255.2': sw1, sw2 = 'QFXDC7', 'QFXG8'
+                            case '10.10.30.2'|'10.10.40.2'|'10.10.41.2': sw1, sw2 = 'MX240_01', 'QFXG8'
+                            case '10.10.31.2': sw1, sw2 = 'MX240_01', 'QFXG8'
+                            case '10.10.33.2': sw1, sw2 = 'MX240_01', 'MX240_01'
+                            case '172.31.255.2': sw1, sw2 = 'MX240_01', 'QFXG8'
                             case '172.31.255.18': sw1, sw2 = 'EXDC4', 'QFXG8'
                         
                         cfg1, cfg2, cfg3, cfg4 = get_config_commands(client_ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt)
@@ -270,8 +270,8 @@ def process_queue_batch():
                             ipaddress.ip_address(client_ip) in ipaddress.ip_network(entry, strict=False)
                             for entry in FULL_BLOCK_IPS
                         ):
-                        # Apply VT config to QFXDC7 if client_ip is in FULL_BLOCK_IPS, because this config is specific to full block policy
-                            commands_to_send['QFXDC7'].extend(cfg4)
+                        # Apply VT config to MX240_01 if client_ip is in FULL_BLOCK_IPS, because this config is specific to full block policy
+                            commands_to_send['MX240_01'].extend(cfg4)
                         break
             
             # 4. Thực thi Đa luồng (Multithreading)

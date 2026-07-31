@@ -60,6 +60,17 @@ FULL_BLOCK_IPS = {
     '45.119.215.11/32'
 }
 
+FPT_ROUTING_INSTANCE_BY_NH = {
+    '10.10.33.2': 'BGP-FPT3',
+    '10.10.40.2': 'FPT1-131423',
+    '10.10.41.2': 'FPT1-131423',
+    '10.10.30.2': 'FPT1-131423',
+}
+
+
+def get_fpt_routing_instance(next_hop_fpt):
+    return FPT_ROUTING_INSTANCE_BY_NH.get(next_hop_fpt, 'BGP-FPT')
+
 app = Flask(__name__)
 ip_queue = Queue()
 DB_FILE = 'allsite-hcm.db'
@@ -148,7 +159,7 @@ def check_ip_in_ranges(ip, ranges):
 
 def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt):
     DC = "BGP-CMC-01" if next_hop_cmc in ("172.31.255.3","172.18.11.3") else "BGP-CMC-02"
-    DC_FPT = "FPT1-131423" if next_hop_fpt in ("10.10.40.2","10.10.41.2","10.10.30.2") else ("BGP-FPT3" if next_hop_fpt == "10.10.33.2" else "BGP-FPT")
+    fpt_routing_instance = get_fpt_routing_instance(next_hop_fpt)
     is_full_block = any(
         ipaddress.ip_address(ip) in ipaddress.ip_network(entry, strict=False)
         for entry in FULL_BLOCK_IPS
@@ -158,15 +169,15 @@ def get_config_commands(ip, action, next_hop_fpt, next_hop_cmc, next_hop_vnpt):
     vnpt_term = 3 if is_full_block else 1
     cmd_type = "set" if action == "ban" else "delete"
     
-    res1 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip}/32 next-hop {next_hop_fpt}",
+    res1 = [f"{cmd_type} routing-instances {fpt_routing_instance} routing-options static route {ip}/32 next-hop {next_hop_fpt}",
             f"{cmd_type} policy-options policy-statement {QT} term 1 from route-filter {ip}/32 exact"]
     res2 = [f"{cmd_type} routing-instances {DC} routing-options static route {ip}/32 next-hop {next_hop_cmc}",
             f"{cmd_type} policy-options policy-statement {QT} term 1 from route-filter {ip}/32 exact"]
-    res3 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip}/32 {route_next_hop_vnpt}",
+    res3 = [f"{cmd_type} routing-instances {fpt_routing_instance} routing-options static route {ip}/32 {route_next_hop_vnpt}",
             f"{cmd_type} policy-options policy-statement black-hole-VNPT term {vnpt_term} from route-filter {ip}/32 exact"]
     res4 = []
     if is_full_block:
-        res4 = [f"{cmd_type} routing-instances {DC_FPT} routing-options static route {ip}/32 next-hop {next_hop_fpt}",
+        res4 = [f"{cmd_type} routing-instances {fpt_routing_instance} routing-options static route {ip}/32 next-hop {next_hop_fpt}",
             f"{cmd_type} policy-options policy-statement black-hole-ALL-VT term 1 from route-filter {ip}/32 exact"]
     return res1, res2, res3, res4
 

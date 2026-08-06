@@ -36,7 +36,8 @@ logger.addHandler(console_handler)
 DEVICES = {
     'QFXG8': {"device_type": "juniper", "ip": "10.8.8.38", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50},
     'EXDC4': {"device_type": "juniper", "ip": "10.2.8.1", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50},
-    'MX240_01': {"device_type": "juniper", "ip": "10.4.8.13", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50}
+    'MX240_01': {"device_type": "juniper", "ip": "10.4.8.13", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50},
+    'QFXDC72': {"device_type": "juniper", "ip": "10.2.8.82", "username": "fastnetmon", "password": "M74NRb57k5vc6U", "read_timeout_override": 50}
 }
 
 IP_RANGES = {
@@ -78,7 +79,7 @@ db_lock = threading.Lock()
 
 # --- TRACKING TRẠNG THÁI ---
 status_lock = threading.Lock()
-switch_status = {'QFXG8': 'idle', 'EXDC4': 'idle', 'MX240_01': 'idle', 'QFXJ23': 'idle'}
+switch_status = {'QFXG8': 'idle', 'EXDC4': 'idle', 'MX240_01': 'idle', 'QFXJ23': 'idle', 'QFXDC72': 'idle'}
 current_batch_ips = []
 batch_start_time = None
 
@@ -254,7 +255,7 @@ def process_queue_batch():
                 current_batch_ips = [item['ip'] for item in batch]
                     
             print(f"\n--- Bắt đầu xử lý lô gồm {len(batch)} IP ---")
-            commands_to_send = {'QFXG8': [], 'EXDC4': [], 'MX240_01': [], 'QFXJ23': []}
+            commands_to_send = {'QFXG8': [], 'EXDC4': [], 'MX240_01': [], 'QFXJ23': [], 'QFXDC72': []}
             
             # 3. Phân loại lệnh vào Dictionary
             for item in batch:
@@ -266,7 +267,7 @@ def process_queue_batch():
                             case '10.10.20.2'|'10.10.10.2'|'10.10.32.2': sw1, sw2 = 'EXDC4', 'QFXG8'
                             case '10.10.30.2'|'10.10.40.2'|'10.10.41.2': sw1, sw2 = 'MX240_01', 'QFXG8'
                             case '10.10.31.2': sw1, sw2 = 'MX240_01', 'QFXG8'
-                            case '10.10.33.2': sw1, sw2 = 'MX240_01', 'MX240_01'
+                            case '10.10.33.2': sw1, sw2 = 'QFXDC72', 'QFXDC72'
                             case '172.31.255.2': sw1, sw2 = 'MX240_01', 'QFXG8'
                             case '172.31.255.18': sw1, sw2 = 'EXDC4', 'QFXG8'
                         
